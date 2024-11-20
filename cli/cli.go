@@ -68,5 +68,5 @@ func (cli *CLI) signUp() {
 		fmt.Println(err)
 	}
 	fmt.Println("Your account has been successfully registered!")
-	fmt.Println("")
+	
 }

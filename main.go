@@ -1,22 +1,18 @@
-// Go & MySQL CRUD Example
 package main
 
 import (
-	// "go-mysql/cli"
-	// "go-mysql/config"
-	// "go-mysql/handler"
-
+	"GRIMIDIE/cli"
 	"GRIMIDIE/config"
+	"GRIMIDIE/handler"
 
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	// db := 
-	config.ConnectDB()
+	db := config.ConnectDB()
 
-	// handler := handler.NewHandler(db)
+	handler := handler.NewHandler(db)
 
-	// cli := cli.NewCLI(handler)
-	// cli.Init()
+	cli := cli.NewCLI(handler)
+	cli.Init()
 }

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"GRIMIDIE/handler"
+	"bufio"
 	"fmt"
 	"os"
 )
@@ -28,7 +29,7 @@ func (cli *CLI) Init() {
 func (cli *CLI) showMenu() {
 	for {
 		// Menampilkan menu pilihan
-		fmt.Println("Welcome to the CLI Application!")
+		fmt.Println("Welcome to the GRIMIDIE Application!")
 		fmt.Println("1. Sign Up")
 		fmt.Println("2. Sign In")
 		fmt.Println("3. Exit")
@@ -43,7 +44,7 @@ func (cli *CLI) showMenu() {
 			cli.signUp()
 		case 2:
 			// Sign In
-			cli.signIn()
+			// cli.signIn()
 		case 3:
 			fmt.Println("GoodBye!")
 			os.Exit(0)
@@ -56,8 +57,10 @@ func (cli *CLI) showMenu() {
 // Fungsi untuk proses sign up
 func (cli *CLI) signUp() {
 	var name, email, password string
+
+	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Enter Name:")
-	fmt.Scanln(&name)
+	name,_ = reader.ReadString('\n')
 	fmt.Println("Enter Email:")
 	fmt.Scanln(&email)
 	fmt.Println("Enter Password:")
@@ -67,6 +70,6 @@ func (cli *CLI) signUp() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("Your account has been successfully registered!")
+	fmt.Println("Your account has been successfully registered!\n")
 	
 }

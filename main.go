@@ -6,11 +6,14 @@ import (
 	// "go-mysql/config"
 	// "go-mysql/handler"
 
-	_ "github.com/go-sql-driver/mysql"
+	"GRIMIDIE/config"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	// db := config.ConnectDB()
+	// db := 
+	config.ConnectDB()
 
 	// handler := handler.NewHandler(db)
 

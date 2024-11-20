@@ -4,13 +4,16 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
-// ConnectDB connects to the database
 func ConnectDB() *sql.DB {
 	var err error
-	DB, err := sql.Open("mysql", "root:@tcp(localhost:3306)/GRIMIDIE")
+
+	// Supabase connection string
+	connStr := "postgres://postgres.svkqrngeyxdqkwwyswkc:tl2Vn9nnThKTOpCV@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+
+	DB, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Print("Error connecting to the database: ", err)
 		log.Fatal(err)
@@ -22,7 +25,7 @@ func ConnectDB() *sql.DB {
 		log.Fatal(err)
 	}
 
-	log.Print("Connected to the database")
+	log.Print("Connected to the Supabase database")
 
 	return DB
 }

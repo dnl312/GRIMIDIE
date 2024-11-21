@@ -15,11 +15,12 @@ type MockHandler struct {
 }
 
 type Handler interface {
-	UserRegister(name, email, password string) error
-	UserLogin(email, password string) error
+	UserRegister(name, email, password string) (int, error)
+	UserLogin(email, password string) (int, error)
 	ListBooks() error
 	CreatePinjam(UserID, BookID, Qty int) error
-	ReturnPinjam(BookOrderID int) error
+	ReturnPinjam(BookOrderID int) (float64, error)
+	ListPeminjaman(UserID int) error
 }
 
 type HandlerImpl struct {
@@ -32,35 +33,37 @@ func NewHandler(DB *sql.DB) *HandlerImpl {
 	}
 }
 
-func (h *HandlerImpl) UserRegister(Nama, Email, Password string) error {
-	_, err := h.DB.Exec(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1,$2,$3)`, Nama, Email, Password)
+func (h *HandlerImpl) UserRegister(Nama, Email, Password string) (int, error) {
+	var UserID int
+	err := h.DB.QueryRow(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1,$2,$3)`, Nama, Email, Password).Scan(&UserID)
 	if err != nil {
 		log.Print("Error inserting record: ", err)
-		return err
+		return 0, err
 	}
 
 	log.Print("Record inserted successfully")
-	return nil
+	return UserID, nil
 }
 
-func (h *HandlerImpl) UserLogin(email, password string) error {
+func (h *HandlerImpl) UserLogin(email, password string) (int, error) {
 	var storedPassword string
+	var UserID int
 
-	query := `SELECT "Password" FROM "Users" WHERE "Email" = $1`
-	err := h.DB.QueryRow(query, email).Scan(&storedPassword)
+	query := `SELECT "UserID", "Password" FROM "Users" WHERE "Email" = $1`
+	err := h.DB.QueryRow(query, email).Scan(&UserID, &storedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("user not found")
+			return 0, fmt.Errorf("user not found")
 		}
-		return fmt.Errorf("database error: %v", err)
+		return 0, fmt.Errorf("database error: %v", err)
 	}
 
 	if storedPassword != password {
-		return fmt.Errorf("invalid password")
+		return 0, fmt.Errorf("invalid password")
 	}
 
 	fmt.Printf("Sign In Successful! \n")
-	return nil
+	return UserID, nil
 }
 
 func (h *HandlerImpl) ListBooks() error {
@@ -128,7 +131,7 @@ func (m *MockHandler) CreatePinjam(UserID, BookID, Qty int) error {
 func (h *HandlerImpl) ListPeminjaman(UserID int) error {
 	rows, err := h.DB.Query(`SELECT bo."OrderID", b."JudulBuku" , bod."TanggalPinjam" FROM "BookOrders" bo
 							left join "BookOrderDetail" bod on bod."BookOrderDetailID" = bo."BookOrderDetailID" 
-							left join "Books" b ON b."BookID" = bod."BookID" where bod."UserID" = $1`, UserID)
+							left join "Books" b ON b."BookID" = bod."BookID" where bo."UserID" = $1 AND bod."TanggalBalik" IS NULL`, UserID)
 	if err != nil {
 		log.Print("Error fetching records: ", err)
 		return err
@@ -138,15 +141,18 @@ func (h *HandlerImpl) ListPeminjaman(UserID int) error {
 	fmt.Println("ID\tJudul Buku\tTanggal Pinjam")
 	for rows.Next() {
 		var OrderID int
-		var JudulBuku, TanggalPinjam string
+		var JudulBuku string
+		var TanggalPinjam time.Time
 		err = rows.Scan(&OrderID, &JudulBuku, &TanggalPinjam)
 		if err != nil {
 			log.Print("Error scanning record: ", err)
 			return err
 		}
 
-		fmt.Printf("%d\t%s\t%s\n", OrderID, JudulBuku, TanggalPinjam)
+		dateOnly := TanggalPinjam.Format("2006-01-02")
+		fmt.Printf("%d\t%s\t%s\n", OrderID, JudulBuku, dateOnly)
 	}
+	fmt.Println()
 
 	return nil
 }
@@ -156,41 +162,60 @@ func (m *MockHandler) ListPeminjaman(UserID int) error {
 	return args.Error(0)
 }
 
-func (h *HandlerImpl) ReturnPinjam(BookOrderID int) error {
+func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
+	var Denda float64
 
-	rows, err := h.DB.Query(`SELECT (CAST(NOW() AS date) - CAST("TanggalPinjam" AS date)) as DateDifference FROM "BookOrders" bo
-							left join "BookOrderDetail" bod on bod."BookOrderDetailID" = bo."BookOrderDetailID" 
-							where bo."OrderID" = $1`, BookOrderID)
+	rows, err := h.DB.Query(`
+		SELECT bo."BookOrderDetailID", bod."BookID", 
+		       (CAST(NOW() AS date) - CAST(bod."TanggalPinjam" AS date)) as DateDifference, 
+		       bod."Quantity" 
+		FROM "BookOrders" bo
+		LEFT JOIN "BookOrderDetail" bod ON bod."BookOrderDetailID" = bo."BookOrderDetailID" 
+		WHERE bo."OrderID" = $1`, BookOrderID)
+		
 	if err != nil {
-		log.Print("Error Fetch Book Order transaction: ", err)
+		log.Print("Error fetching book order transaction: ", err)
+		return 0, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
-		var BookOrderDetailID, DateDifference int
-		err = rows.Scan(&BookOrderDetailID, &DateDifference)
+		var BookOrderDetailID, BookID, DateDifference, Quantity int
+		err = rows.Scan(&BookOrderDetailID, &BookID, &DateDifference, &Quantity)
+
 		if err != nil {
 			log.Print("Error scanning record: ", err)
-			return err
+			return 0, err
 		}
 
 		if DateDifference > 7 {
-			_, err := h.DB.Query(`UPDATE public."BookOrderDetail"
-							SET  "TanggalBalik"=NOW(), "Denda"= $1
-							WHERE "BookOrderDetailID"= $2`, DateDifference*5000, BookOrderDetailID)
+			Denda = float64(DateDifference * 5000)
+
+			_, err = h.DB.Exec(`UPDATE "BookOrderDetail"
+				SET "TanggalBalik" = NOW(), "Denda" = $1
+				WHERE "BookOrderDetailID" = $2`, Denda, BookOrderDetailID)
 			if err != nil {
-				log.Print("Error scanning record: ", err)
-				return err
+				log.Print("Error updating BookOrderDetail: ", err)
+				return 0, err
 			}
-		} else {
-			//delete query fahri
+		}
+
+		_, err = h.DB.Exec(`
+			UPDATE "Books" 
+			SET "StokBuku" = "StokBuku" + $1 
+			WHERE "BookID" = $2`, Quantity, BookID)
+		if err != nil {
+			log.Print("Error updating Books table: ", err)
+			return 0, err
 		}
 	}
 
-	log.Print("Transaction inserted successfully")
-	return nil
+	log.Print("Returning book successfully")
+	return Denda, nil
 }
 
-func (m *MockHandler) ReturnPinjam(BookOrderID int) error {
+
+func (m *MockHandler) ReturnPinjam(BookOrderID int)  error{
 	args := m.Called(BookOrderID)
 	return args.Error(0)
 }

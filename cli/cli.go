@@ -11,6 +11,7 @@ import (
 
 type CLI struct {
 	Handler handler.Handler
+	CurrentUserID int
 }
 
 func NewCLI(handler handler.Handler) *CLI {
@@ -47,7 +48,8 @@ func (cli *CLI) showMenu() {
 			cli.signUp()
 		case 2:
 			// Sign In
-			cli.signIn()
+			cli.signInDebugMode()
+			//cli.signIn()
 		case 3:
 			fmt.Println("GoodBye!")
 			os.Exit(0)
@@ -69,7 +71,7 @@ func (cli *CLI) signUp() {
 	fmt.Print("Enter Password:")
 	fmt.Scanln(&password)
 
-	err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
+	_,err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -85,11 +87,25 @@ func (cli *CLI) signIn() {
 	fmt.Print("Password:")
 	fmt.Scanln(&password)
 
-	if err := cli.Handler.UserLogin(email, password); err != nil {
+	userID, err := cli.Handler.UserLogin(email, password)
+	if err != nil {
 		fmt.Println("Error during sign in:", err)
 		return
 	}
 
+	cli.CurrentUserID = userID 
+	cli.showUserMenu()
+}
+
+func (cli *CLI) signInDebugMode() {
+
+	userID, err := cli.Handler.UserLogin("jack@example.com", "password890")
+	if err != nil {
+		fmt.Println("Error during sign in:", err)
+		return
+	}
+
+	cli.CurrentUserID = userID 
 	cli.showUserMenu()
 }
 
@@ -111,6 +127,7 @@ func (cli *CLI) showUserMenu() {
 			cli.lendBook()
 		case 2:
 			// return book from library
+			cli.listPinjam()
 			cli.returnBook()
 		case 3:
 			fmt.Println("GoodBye!")
@@ -134,7 +151,29 @@ func (cli *CLI) lendBook() {
 	fmt.Println("Displaying Books List...")
 }
 
+
+func (c *CLI) listPinjam() {
+	err := c.Handler.ListPeminjaman(c.CurrentUserID)
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+}
+
 func (cli *CLI) returnBook() {
-	// logic
-	fmt.Println("Renting Books...")
+
+	var OrderID int
+	fmt.Print("Choose: ")
+	fmt.Scanln(&OrderID)
+
+	denda,err := cli.Handler.ReturnPinjam(OrderID)
+	if err != nil {
+		log.Print("Error returning book: ", err)
+		log.Fatal(err)
+	}
+
+	if(denda>0){
+		fmt.Printf("Denda: %.2f", denda)
+		fmt.Println()
+	}
 }

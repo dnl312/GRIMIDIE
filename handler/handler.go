@@ -39,8 +39,6 @@ func (h *HandlerImpl) UserRegister(name, email, password string) error {
 
 func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 
-	orderDetail, err := h.DB.Exec("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES(?, ?, NOW(), '', 0);", BookID, Qty)
-
 	var orderDtlId int64
 	
 	err := h.DB.QueryRow(`INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) 

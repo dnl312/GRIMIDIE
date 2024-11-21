@@ -41,13 +41,22 @@ func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 
 	orderDetail, err := h.DB.Exec("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES(?, ?, NOW(), '', 0);", BookID, Qty)
 
+	var orderDtlId int64
+	
+	err := h.DB.QueryRow(`INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) 
+						VALUES ($1, $2, NOW(), NULL, 0) 
+						RETURNING ID;`,
+						BookID, Qty).Scan(&orderDtlId)
+
+	//_ , err = h.DB.Query("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES ($1, $2, NOW(), NULL, 0) ", BookID, Qty)
+	
 	if err != nil {
-		log.Print("Error creating transaction: ", err)
-	} else {
-		orderDtlId, _ := orderDetail.LastInsertId()
-		_, err = h.DB.Exec("INSERT INTO BookOrders(UserID, BookOrderDetailID) VALUES(?, ?)", UserID, orderDtlId)
+		log.Print("Error creating Book Order Detail transaction: ", err)
+	}else{
+		_, err = h.DB.Exec("INSERT INTO BookOrders(UserID, BookOrderDetailID) VALUES($1, $2)", UserID, orderDtlId)
+
 		if err != nil {
-			log.Print("Error creating transaction: ", err)
+			log.Print("Error creating Book Orders transaction: ", err)
 		}
 	}
 

@@ -29,7 +29,8 @@ func (cli *CLI) Init() {
 func (cli *CLI) showMenu() {
 	for {
 		// Menampilkan menu pilihan
-		fmt.Println("Welcome to the GRIMIDIE Application!")
+		fmt.Println("Welcome to the GRIMIDIE Application! | Sign In To GRIMIDIE")
+		fmt.Println("Don't have an account yet? Sign Up")
 		fmt.Println("1. Sign Up")
 		fmt.Println("2. Sign In")
 		fmt.Println("3. Exit")
@@ -44,7 +45,7 @@ func (cli *CLI) showMenu() {
 			cli.signUp()
 		case 2:
 			// Sign In
-			//cli.signIn()
+			cli.signIn()
 		case 3:
 			fmt.Println("GoodBye!")
 			os.Exit(0)
@@ -70,6 +71,20 @@ func (cli *CLI) signUp() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("Your account has been successfully registered!\n")
+	fmt.Println("Your account has been successfully registered!")
 
+}
+
+// Fungsi untuk proses sign in
+func (cli *CLI) signIn() {
+	var email, password string
+	fmt.Println("Email:")
+	fmt.Scanln(&email)
+	fmt.Println("Password:")
+	fmt.Scanln(&password)
+
+	if err := cli.Handler.UserLogin(email, password); err != nil {
+		fmt.Println("Error during sign in:", err)
+		return
+	}
 }

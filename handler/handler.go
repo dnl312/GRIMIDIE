@@ -55,7 +55,7 @@ func (h *HandlerImpl) UserLogin(email, password string) error {
 		return fmt.Errorf("invalid password")
 	}
 
-	fmt.Printf("Sign in successful! \n")
+	fmt.Printf("Sign In Successful! \n")
 	return nil
 }
 
@@ -67,13 +67,15 @@ func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 						VALUES ($1, $2, NOW(), NULL, 0) 
 						RETURNING ID`,
 						BookID, Qty).Scan(&orderDtlId)
-
+  
 	//_ , err = h.DB.Query("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES ($1, $2, NOW(), NULL, 0) ", BookID, Qty)
-	
+
 	if err != nil {
 		log.Print("Error creating Book Order Detail transaction: ", err)
+
 	}else{
 		_, err = h.DB.Exec(`INSERT INTO "BookOrders" ("UserID", "BookOrderDetailID") VALUES($1, $2)`, UserID, orderDtlId)
+
 
 		if err != nil {
 			log.Print("Error creating Book Orders transaction: ", err)

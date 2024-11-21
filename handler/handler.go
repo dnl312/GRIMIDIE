@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/stretchr/testify/mock"
@@ -15,7 +14,6 @@ type MockHandler struct {
 type Handler interface {
 	UserRegister(name, email, password string) error
 	CreatePinjam(UserID, BookID, Qty int) error
-	//UserLogin(email, password string) error
 }
 
 type HandlerImpl struct {
@@ -28,15 +26,20 @@ func NewHandler(DB *sql.DB) *HandlerImpl {
 	}
 }
 
+func (h *HandlerImpl) UserRegister(name, email, password string) error {
+	_, err := h.DB.Exec("INSERT INTO Users (name, email, password) VALUES ($1,$2,$3)", name, email, password)
+	if err != nil {
+		log.Print("Error inserting record: ", err)
+		return err
+	}
 
-func (h *HandlerImpl) UserRegister(name, email, password string) error{
-  	fmt.Println()
-	fmt.Printf("%s, %s, %s\n", name, email, password)
-
+	log.Print("Record inserted successfully")
 	return nil
 }
 
-func (h *HandlerImpl) CreatePinjam (UserID, BookID, Qty int) error {
+func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
+
+	orderDetail, err := h.DB.Exec("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES(?, ?, NOW(), '', 0);", BookID, Qty)
 
 	var orderDtlId int64
 	
@@ -51,6 +54,7 @@ func (h *HandlerImpl) CreatePinjam (UserID, BookID, Qty int) error {
 		log.Print("Error creating Book Order Detail transaction: ", err)
 	}else{
 		_, err = h.DB.Exec("INSERT INTO BookOrders(UserID, BookOrderDetailID) VALUES($1, $2)", UserID, orderDtlId)
+
 		if err != nil {
 			log.Print("Error creating Book Orders transaction: ", err)
 		}

@@ -29,7 +29,7 @@ func NewHandler(DB *sql.DB) *HandlerImpl {
 }
 
 func (h *HandlerImpl) UserRegister(Nama, Email, Password string) error {
-	_, err := h.DB.Exec("INSERT INTO Users (Nama, Email, Password) VALUES ($1,$2,$3)", Nama, Email, Password)
+	_, err := h.DB.Exec(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1,$2,$3)`, Nama, Email, Password)
 	if err != nil {
 		log.Print("Error inserting record: ", err)
 		return err
@@ -42,7 +42,7 @@ func (h *HandlerImpl) UserRegister(Nama, Email, Password string) error {
 func (h *HandlerImpl) UserLogin(email, password string) error {
 	var storedPassword string
 
-	query := "SELECT password FROM users WHERE email = $1"
+	query := `SELECT "Password" FROM "Users" WHERE "Email" = $1`
 	err := h.DB.QueryRow(query, email).Scan(&storedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {

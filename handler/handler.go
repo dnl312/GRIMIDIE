@@ -196,7 +196,7 @@ func (h *HandlerImpl) DeleteReturnedTransactions() error {
 		log.Printf("Error retrieving rows affected: %v", err)
 		return err
 	}
-
+	//
 	log.Printf("Berhasil menghapus %d transaksi yang sudah selesai.", rowsDeleted)
 	return nil
 }

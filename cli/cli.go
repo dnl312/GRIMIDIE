@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type CLI struct {
@@ -67,7 +68,7 @@ func (cli *CLI) signUp() {
 	fmt.Print("Enter Password:")
 	fmt.Scanln(&password)
 
-	err := cli.Handler.UserRegister(name, email, password)
+	err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
 	if err != nil {
 		fmt.Println(err)
 	}

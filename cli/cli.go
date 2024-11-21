@@ -44,7 +44,7 @@ func (cli *CLI) showMenu() {
 			cli.signUp()
 		case 2:
 			// Sign In
-			// cli.signIn()
+			//cli.signIn()
 		case 3:
 			fmt.Println("GoodBye!")
 			os.Exit(0)
@@ -60,7 +60,7 @@ func (cli *CLI) signUp() {
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Enter Name:")
-	name,_ = reader.ReadString('\n')
+	name, _ = reader.ReadString('\n')
 	fmt.Println("Enter Email:")
 	fmt.Scanln(&email)
 	fmt.Println("Enter Password:")
@@ -71,5 +71,5 @@ func (cli *CLI) signUp() {
 		fmt.Println(err)
 	}
 	fmt.Println("Your account has been successfully registered!\n")
-	
+
 }

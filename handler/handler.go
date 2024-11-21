@@ -58,13 +58,14 @@ func (h *HandlerImpl) UserLogin(email, password string) error {
 	fmt.Printf("Sign in successful! \n")
 	return nil
 }
+
 func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 
 	var orderDtlId int64
 	
-	err := h.DB.QueryRow(`INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) 
+	err := h.DB.QueryRow(`INSERT INTO "BookOrderDetail" ("BookID", "Quantity", "TanggalPinjam", "TanggalBalik", "Denda") 
 						VALUES ($1, $2, NOW(), NULL, 0) 
-						RETURNING ID;`,
+						RETURNING ID`,
 						BookID, Qty).Scan(&orderDtlId)
 
 	//_ , err = h.DB.Query("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES ($1, $2, NOW(), NULL, 0) ", BookID, Qty)
@@ -72,7 +73,7 @@ func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 	if err != nil {
 		log.Print("Error creating Book Order Detail transaction: ", err)
 	}else{
-		_, err = h.DB.Exec("INSERT INTO BookOrders(UserID, BookOrderDetailID) VALUES($1, $2)", UserID, orderDtlId)
+		_, err = h.DB.Exec(`INSERT INTO "BookOrders" ("UserID", "BookOrderDetailID") VALUES($1, $2)`, UserID, orderDtlId)
 
 		if err != nil {
 			log.Print("Error creating Book Orders transaction: ", err)

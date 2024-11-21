@@ -4,6 +4,7 @@ import (
 	"GRIMIDIE/handler"
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -95,7 +96,7 @@ func (cli *CLI) signIn() {
 func (cli *CLI) showUserMenu() {
 	for {
 		fmt.Println("\nHere is a list of books you can choose from.")
-
+		cli.listBooks()
 		fmt.Println("1. Lend Book")
 		fmt.Println("2. Return Book")
 		fmt.Println("3. Exit")
@@ -118,6 +119,14 @@ func (cli *CLI) showUserMenu() {
 			fmt.Println("Invalid choice. Please try again.")
 		}
 	}
+}
+func (cli *CLI) listBooks() {
+	err := cli.Handler.ListBooks()
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+	fmt.Println("Users listed successfully")
 }
 
 func (cli *CLI) lendBook() {

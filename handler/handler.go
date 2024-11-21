@@ -16,6 +16,7 @@ type Handler interface {
 	UserRegister(name, email, password string) error
 	UserLogin(email, password string) error
 	CreatePinjam(UserID, BookID, Qty int) error
+	ReturnPinjam(BookOrderID int) error
 }
 
 type HandlerImpl struct {
@@ -68,8 +69,6 @@ func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 						RETURNING ID`,
 						BookID, Qty).Scan(&orderDtlId)
   
-	//_ , err = h.DB.Query("INSERT INTO BookOrderDetail (BookID, Quantity, TanggalPinjam, TanggalBalik, Denda) VALUES ($1, $2, NOW(), NULL, 0) ", BookID, Qty)
-
 	if err != nil {
 		log.Print("Error creating Book Order Detail transaction: ", err)
 
@@ -88,5 +87,76 @@ func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 
 func (m *MockHandler) CreatePinjam(UserID, BookID, Qty int) error {
 	args := m.Called(UserID, BookID, Qty)
+	return args.Error(0)
+}
+
+
+func (h *HandlerImpl) ListPeminjaman(UserID int) error {
+	rows, err := h.DB.Query(`SELECT bo."OrderID", b."JudulBuku" , bod."TanggalPinjam" FROM "BookOrders" bo
+							left join "BookOrderDetail" bod on bod."BookOrderDetailID" = bo."BookOrderDetailID" 
+							left join "Books" b ON b."BookID" = bod."BookID" where bod."UserID" = $1`, UserID)
+	if err != nil {
+		log.Print("Error fetching records: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	fmt.Println("ID\tJudul Buku\tTanggal Pinjam")
+	for rows.Next() {
+		var OrderID int
+		var JudulBuku,TanggalPinjam string
+		err = rows.Scan(&OrderID, &JudulBuku, &TanggalPinjam)
+		if err != nil {
+			log.Print("Error scanning record: ", err)
+			return err
+		}
+
+		fmt.Printf("%d\t%s\t%s\n", OrderID, JudulBuku, TanggalPinjam)
+	}
+
+	return nil
+}
+
+func (m *MockHandler) ListPeminjaman(UserID int) error {
+	args := m.Called(UserID)
+	return args.Error(0)
+}
+
+func (h *HandlerImpl) ReturnPinjam(BookOrderID int) error {
+
+	rows, err := h.DB.Query(`SELECT (CAST(NOW() AS date) - CAST("TanggalPinjam" AS date)) as DateDifference FROM "BookOrders" bo
+							left join "BookOrderDetail" bod on bod."BookOrderDetailID" = bo."BookOrderDetailID" 
+							where bo."OrderID" = $1`, BookOrderID)
+	if err != nil {
+		log.Print("Error Fetch Book Order transaction: ", err)
+	}
+
+	for rows.Next(){
+		var BookOrderDetailID, DateDifference int
+		err = rows.Scan(&BookOrderDetailID, &DateDifference)
+		if err != nil {
+			log.Print("Error scanning record: ", err)
+			return err
+		}
+		
+		if DateDifference>7 {
+			_ , err := h.DB.Query(`UPDATE public."BookOrderDetail"
+							SET  "TanggalBalik"=NOW(), "Denda"= $1
+							WHERE "BookOrderDetailID"= $2`, DateDifference*5000, BookOrderDetailID)
+			if err != nil {
+				log.Print("Error scanning record: ", err)
+				return err
+			}
+		}else {
+			//delete query fahri
+		}
+	}
+
+	log.Print("Transaction inserted successfully")
+	return nil
+}
+
+func (m *MockHandler) ReturnPinjam(BookOrderID int) error {
+	args := m.Called(BookOrderID)
 	return args.Error(0)
 }

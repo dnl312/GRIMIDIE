@@ -32,3 +32,53 @@ func TestCreatePinjam_Negative(t *testing.T) {
 
 	mockHandler.AssertExpectations(t)
 }
+
+func TestListPeminjaman(t *testing.T) {
+	mockHandler := new(handler.MockHandler)
+
+	mockHandler.On("ListPeminjaman", 1).Return(errors.New("some error"))
+
+	err := mockHandler.ListPeminjaman(1)
+
+	assert.EqualError(t, err, "some error")
+	mockHandler.AssertExpectations(t)
+}
+
+func TestListPeminjaman_Negative(t *testing.T) {
+	mockHandler := new(handler.MockHandler)
+
+	mockHandler.On("ListPeminjaman", 1).
+		Return(errors.New("failed to insert into BookOrderDetail"))
+
+	err := mockHandler.ListPeminjaman(1)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, "failed to insert into BookOrderDetail")
+
+	mockHandler.AssertExpectations(t)
+}
+
+func TestReturnPinjam(t *testing.T) {
+	mockHandler := new(handler.MockHandler)
+
+	mockHandler.On("ReturnPinjam", 1).Return(errors.New("some error"))
+
+	err := mockHandler.ReturnPinjam(1)
+
+	assert.EqualError(t, err, "some error")
+	mockHandler.AssertExpectations(t)
+}
+
+func TestReturnPinjam_Negative(t *testing.T) {
+	mockHandler := new(handler.MockHandler)
+
+	mockHandler.On("ReturnPinjam", 1).
+		Return(errors.New("failed to insert into BookOrderDetail"))
+
+	err := mockHandler.ReturnPinjam(1)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, "failed to insert into BookOrderDetail")
+
+	mockHandler.AssertExpectations(t)
+}

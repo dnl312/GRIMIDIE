@@ -100,7 +100,9 @@ func (cli *CLI) showAdminMenu() {
 		fmt.Println("3. Stock Reports")
 		fmt.Println("4. Most Loan Books Reports")
 		fmt.Println("5. Add Book")
-		fmt.Println("6. Exit")
+		fmt.Println("6. Delete Book")
+		fmt.Println("7. Create Admin")
+		fmt.Println("8. Exit")
 		fmt.Print("Choose an option: ")
 
 		var choice int
@@ -118,7 +120,8 @@ func (cli *CLI) showAdminMenu() {
 		case 5:
 			cli.AddBook()
 		case 6:
-			//delete book
+			cli.listBooks()
+			cli.DeleteBook()
 		case 7:
 			//add admin
 		case 8:
@@ -213,13 +216,13 @@ func (cli *CLI) signIn() {
 func (cli *CLI) listBooks() {
 	err := cli.Handler.ListBooks()
 	if err != nil {
-		log.Print("Error listing users: ", err)
+		log.Print("Error listing Books: ", err)
 		log.Fatal(err)
 	}
-	fmt.Println("Users listed successfully")
+	fmt.Println("Books listed successfully")
 }
 
-// Handler interface CreatePinjam
+// Handler interface Addbook
 func (cli *CLI) AddBook() {
 	var judul, pengarang, tanggalTerbit string
 	var qty int
@@ -239,6 +242,19 @@ func (cli *CLI) AddBook() {
 		log.Fatal(err)
 	}
 	fmt.Println("Add book successfully...")
+}
+
+func (cli *CLI) DeleteBook() {
+
+	var BookID int
+	fmt.Print("Which book: ")
+	fmt.Scanln(&BookID)
+
+	 err := cli.Handler.DeleteBook(BookID)
+	if err != nil {
+		log.Print("Error Deleteing book: ", err)
+		log.Fatal(err)
+	}
 }
 
 // Handler interface CreatePinjam

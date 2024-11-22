@@ -29,12 +29,13 @@ func (cli *CLI) Init() {
 	cli.showMenu()
 }
 
+// Region MENU CLI BEGIN
 func (cli *CLI) showMenu() {
 	for {
-		// Menampilkan menu pilihan
-		fmt.Println("Welcome to the GRIMIDIE Application! | Sign In To GRIMIDIE")
-		fmt.Println("           Don't have an account yet? Sign Up")
-		fmt.Println("1. Sign Up")
+		// HOME MENU
+		fmt.Println("		 🎗️GRIMIDIE Application!🎗️")
+		fmt.Println("\nPlease Sign In To GRIMIDIE | Don't have an account yet? Sign Up")
+		fmt.Println("\n1. Sign Up")
 		fmt.Println("2. Sign In")
 		fmt.Println("3. Exit")
 		fmt.Print("Choose an option: ")
@@ -55,64 +56,10 @@ func (cli *CLI) showMenu() {
 		case 123:
 			cli.signInDebugMode()
 		default:
-			fmt.Println("Invalid choice. Please try again.")
+			fmt.Println("⚠️ Invalid choice. Please try again. ⚠️")
 		}
 	}
 }
-
-// Fungsi untuk proses sign up
-func (cli *CLI) signUp() {
-	var name, email, password string
-
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter Name:")
-	name, _ = reader.ReadString('\n')
-	fmt.Print("Enter Email:")
-	fmt.Scanln(&email)
-	fmt.Print("Enter Password:")
-	fmt.Scanln(&password)
-
-	_, err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("Your account has been successfully registered!")
-
-}
-
-// Fungsi untuk proses sign in
-func (cli *CLI) signIn() {
-	var email, password string
-	fmt.Print("Email:")
-	fmt.Scanln(&email)
-	fmt.Print("Password:")
-	fmt.Scanln(&password)
-
-	userID, isAdmin, err := cli.Handler.UserLogin(email, password)
-	if err != nil {
-		fmt.Println("Error during sign in:", err)
-		return
-	}
-	if isAdmin {
-		cli.showAdminMenu()
-	} else {
-		cli.CurrentUserID = userID
-		cli.showUserMenu()
-	}
-
-}
-
-func (cli *CLI) signInDebugMode() {
-
-	userID, _, err := cli.Handler.UserLogin("jack@example.com", "password890")
-	if err != nil {
-		fmt.Println("Error during sign in:", err)
-		return
-	}
-	cli.CurrentUserID = userID
-	cli.showUserMenu()
-}
-
 func (cli *CLI) showUserMenu() {
 	for {
 		fmt.Println("\nHere is a list of books you can choose from.")
@@ -137,7 +84,7 @@ func (cli *CLI) showUserMenu() {
 			fmt.Println("GoodBye!")
 			os.Exit(0)
 		default:
-			fmt.Println("Invalid choice. Please try again.")
+			fmt.Println("⚠️ Invalid choice. Please try again. ⚠️")
 		}
 	}
 }
@@ -160,15 +107,73 @@ func (cli *CLI) showAdminMenu() {
 		case 2:
 			cli.reportPinjam()
 		case 3:
-			//cli.StockReports()
+			cli.reportStock()
 		case 4:
 			fmt.Println("GoodBye Min!")
 			os.Exit(0)
 		default:
-			fmt.Println("Invalid choice. Please try again.")
+			fmt.Println("⚠️ Invalid choice. Please try again. ⚠️")
 		}
 	}
 }
+
+// Region MENU CLI END
+
+func (cli *CLI) signInDebugMode() {
+
+	userID, _, err := cli.Handler.UserLogin("jack@example.com", "password890")
+	if err != nil {
+		fmt.Println("Error during sign in:", err)
+		return
+	}
+	cli.CurrentUserID = userID
+	cli.showUserMenu()
+}
+
+// Region HANDLER interface BEGIN
+// Handler interface UserRegister
+func (cli *CLI) signUp() {
+	var name, email, password string
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter Name:")
+	name, _ = reader.ReadString('\n')
+	fmt.Print("Enter Email:")
+	fmt.Scanln(&email)
+	fmt.Print("Enter Password:")
+	fmt.Scanln(&password)
+
+	_, err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Your account has been successfully registered!")
+
+}
+
+// Handler interface UserLogin
+func (cli *CLI) signIn() {
+	var email, password string
+	fmt.Print("Email:")
+	fmt.Scanln(&email)
+	fmt.Print("Password:")
+	fmt.Scanln(&password)
+
+	userID, isAdmin, err := cli.Handler.UserLogin(email, password)
+	if err != nil {
+		fmt.Println("Error during sign in:", err)
+		return
+	}
+	if isAdmin {
+		cli.showAdminMenu()
+	} else {
+		cli.CurrentUserID = userID
+		cli.showUserMenu()
+	}
+
+}
+
+// Handler interface listBook
 func (cli *CLI) listBooks() {
 	err := cli.Handler.ListBooks()
 	if err != nil {
@@ -178,6 +183,7 @@ func (cli *CLI) listBooks() {
 	fmt.Println("Users listed successfully")
 }
 
+// Handler interface CreatePinjam
 func (cli *CLI) lendBook() {
 	var choice int
 	fmt.Println("Choose Book: ")
@@ -190,22 +196,16 @@ func (cli *CLI) lendBook() {
 	fmt.Println("Displaying Books List...")
 }
 
-func (c *CLI) listPinjam() {
-	err := c.Handler.ListPeminjaman(c.CurrentUserID)
+// Handler interface listPeminjaman
+func (cli *CLI) listPinjam() {
+	err := cli.Handler.ListPeminjaman(cli.CurrentUserID)
 	if err != nil {
 		log.Print("Error listing users: ", err)
 		log.Fatal(err)
 	}
 }
 
-func (c *CLI) reportPinjam() {
-	err := c.Handler.ReportPeminjaman()
-	if err != nil {
-		log.Print("Error listing users: ", err)
-		log.Fatal(err)
-	}
-}
-
+// Handler interface returnPinjam
 func (cli *CLI) returnBook() {
 
 	var OrderID int
@@ -223,3 +223,24 @@ func (cli *CLI) returnBook() {
 		fmt.Println()
 	}
 }
+
+// Region HANDLER interface END
+
+// Region REPORT HANDLER CLI
+
+func (cli *CLI) reportPinjam() {
+	err := cli.Handler.ReportPeminjaman()
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+}
+func (cli *CLI) reportStock() {
+	err := cli.Handler.ReportStock()
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+}
+
+// REPORT USER DISINI YAH

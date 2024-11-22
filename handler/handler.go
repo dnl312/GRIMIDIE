@@ -22,6 +22,7 @@ type Handler interface {
 	ReturnPinjam(BookOrderID int) (float64, error)
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
+	ReportStock() error
 }
 
 type HandlerImpl struct {
@@ -78,7 +79,24 @@ func (m *MockHandler) UserLogin(email, password string) (int, error) {
 	return args.Int(0), args.Error(1)
 }
 func (h *HandlerImpl) ListBooks() error {
-	rows, err := h.DB.Query(`SELECT * FROM "Books"`)
+	rows, err := h.DB.Query(`
+SELECT
+    b."BookID",
+    b."JudulBuku",
+    b."Pengarang",
+    b."PublishDate",
+    (b."StokBuku" - COALESCE(COUNT(ub."BookID"), 0))
+FROM
+    public."Books" b
+LEFT JOIN
+    public."UserBooks" ub
+ON
+    b."BookID" = ub."BookID" AND ub."TanggalBalik" IS NULL
+GROUP BY
+    b."BookID", b."JudulBuku", b."Pengarang", b."PublishDate", b."StokBuku"
+ORDER BY
+    b."BookID" ASC;
+`)
 	if err != nil {
 		log.Print("Error listing books: ", err)
 		return err
@@ -222,9 +240,9 @@ func (h *HandlerImpl) ReportPeminjaman() error {
 	fmt.Println(strings.Repeat("-", 80))
 	for rows.Next() {
 		var OrderID int
-		var JudulBuku,Nama string
+		var JudulBuku, Nama string
 		var TanggalPinjam time.Time
-		err = rows.Scan(&OrderID, &JudulBuku,&Nama, &TanggalPinjam)
+		err = rows.Scan(&OrderID, &JudulBuku, &Nama, &TanggalPinjam)
 		if err != nil {
 			log.Print("Error scanning record: ", err)
 			return err
@@ -304,4 +322,50 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 func (m *MockHandler) ReturnPinjam(BookOrderID int) error {
 	args := m.Called(BookOrderID)
 	return args.Error(0)
+}
+
+func (h *HandlerImpl) ReportStock() error {
+	rows, err := h.DB.Query(`
+SELECT
+    b."JudulBuku",
+    b."StokBuku",
+    COALESCE(COUNT(ub."BookID"), 0) ,
+    (b."StokBuku" - COALESCE(COUNT(ub."BookID"), 0))
+FROM
+    public."Books" b
+LEFT JOIN
+    public."UserBooks" ub
+ON
+    b."BookID" = ub."BookID" AND ub."TanggalBalik" IS NULL
+GROUP BY
+    b."BookID", b."JudulBuku", b."StokBuku"
+ORDER BY
+    b."JudulBuku";
+`)
+	if err != nil {
+		log.Print("Error listing books: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	// Adjusted separator length
+	fmt.Println(strings.Repeat("-", 66))
+	fmt.Printf("| %-25s | %-6s | %-10s | %-12s |\n", "BOOK TITLE", "STOCK", "LOAN BOOK", "ACTUAL STOCK")
+	fmt.Println(strings.Repeat("-", 66))
+
+	for rows.Next() {
+		var title string
+		var Stock, loanBook, finalStock int
+
+		if err := rows.Scan(&title, &Stock, &loanBook, &finalStock); err != nil {
+			return fmt.Errorf("database scanning rows: %v", err)
+		}
+		fmt.Printf("| %-25s | %-7d| %-10d | %-12d |\n", title, Stock, loanBook, finalStock)
+	}
+	fmt.Println(strings.Repeat("-", 66))
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error scanning rows: %v", err)
+	}
+	return nil
 }

@@ -25,7 +25,7 @@ func ConnectDB() *sql.DB {
 		log.Fatal(err)
 	}
 
-	log.Print("Connected to the Supabase database")
+	//log.Print("Connected to the Supabase database")
 
 	return DB
 }

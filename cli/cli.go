@@ -100,7 +100,9 @@ func (cli *CLI) showAdminMenu() {
 		fmt.Println("3. Stock Reports")
 		fmt.Println("4. Most Loan Books Reports")
 		fmt.Println("5. Add Book")
-		fmt.Println("6. Exit")
+		fmt.Println("6. Delete Books")
+		fmt.Println("7. Add Admin")
+		fmt.Println("8. Exit")
 		fmt.Print("Choose an option: ")
 
 		var choice int
@@ -120,7 +122,8 @@ func (cli *CLI) showAdminMenu() {
 		case 6:
 			//delete book
 		case 7:
-			//add admin
+			cli.listUsersNotAdmin()
+			//cli.showAddMenu()
 		case 8:
 			fmt.Println("GoodBye Min!")
 			os.Exit(0)
@@ -233,7 +236,7 @@ func (cli *CLI) AddBook() {
 	fmt.Scan(&tanggalTerbit)
 	fmt.Println("Quantity: ")
 	fmt.Scan(&qty)
-	err := cli.Handler.AddBook(strings.ReplaceAll(judul, "\n", ""), strings.ReplaceAll(pengarang, "\n", "") , tanggalTerbit, qty)
+	err := cli.Handler.AddBook(strings.ReplaceAll(judul, "\n", ""), strings.ReplaceAll(pengarang, "\n", ""), tanggalTerbit, qty)
 	if err != nil {
 		log.Print("Error listing users: ", err)
 		log.Fatal(err)
@@ -280,6 +283,18 @@ func (cli *CLI) returnBook() {
 		fmt.Printf("Denda: %.2f", denda)
 		fmt.Println()
 	}
+}
+
+func (cli *CLI) listUsersNotAdmin() {
+	var choice int
+	fmt.Print("Choose ID: ")
+	fmt.Scan(&choice)
+	err := cli.Handler.ListUsersNotAdmin()
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+	fmt.Println("Users listed successfully")
 }
 
 // Region HANDLER interface END

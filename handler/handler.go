@@ -79,7 +79,24 @@ func (m *MockHandler) UserLogin(email, password string) (int, error) {
 	return args.Int(0), args.Error(1)
 }
 func (h *HandlerImpl) ListBooks() error {
-	rows, err := h.DB.Query(`SELECT * FROM "Books"`)
+	rows, err := h.DB.Query(`
+SELECT
+    b."BookID",
+    b."JudulBuku",
+    b."Pengarang",
+    b."PublishDate",
+    (b."StokBuku" - COALESCE(COUNT(ub."BookID"), 0))
+FROM
+    public."Books" b
+LEFT JOIN
+    public."UserBooks" ub
+ON
+    b."BookID" = ub."BookID" AND ub."TanggalBalik" IS NULL
+GROUP BY
+    b."BookID", b."JudulBuku", b."Pengarang", b."PublishDate", b."StokBuku"
+ORDER BY
+    b."BookID" ASC;
+`)
 	if err != nil {
 		log.Print("Error listing books: ", err)
 		return err

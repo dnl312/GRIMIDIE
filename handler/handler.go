@@ -20,12 +20,13 @@ type Handler interface {
 	ListBooks() error
 	CreatePinjam(UserID, BookID, Qty int) error
 	ReturnPinjam(UserID, BookOrderID int) (float64, error)
-	AddBook(title, pengarang, publishDate string, qty int ) error
+	AddBook(title, pengarang, publishDate string, qty int) error
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
 	DeleteBook(BookID int ) error
 	ReportStock() error
 	ReportPopularBooks() error
+	ListUsersNotAdmin() error
 }
 
 type HandlerImpl struct {
@@ -131,8 +132,8 @@ ORDER BY
 	return nil
 }
 
-func (h *HandlerImpl) AddBook(title, pengarang, publishDate string, qty int ) error{
-		_,err := h.DB.Exec(`INSERT INTO "Books" ("JudulBuku", "Pengarang", "PublishDate", "StokBuku")
+func (h *HandlerImpl) AddBook(title, pengarang, publishDate string, qty int) error {
+	_, err := h.DB.Exec(`INSERT INTO "Books" ("JudulBuku", "Pengarang", "PublishDate", "StokBuku")
 								VALUES($1, $2, $3, $4);`, title, pengarang, publishDate, qty)
 
 	if err != nil {
@@ -360,12 +361,12 @@ func (h *HandlerImpl) ReturnPinjam(UserID, BookOrderID int) (float64, error) {
 		}
 	}
 
-	if !rows.Next(){
+	if !rows.Next() {
 		log.Print("Record not found! ")
-	}else{
+	} else {
 		log.Print("Returning book successfully")
 	}
-	
+
 	return Denda, nil
 }
 
@@ -450,6 +451,43 @@ ORDER BY "TotalDipinjam" DESC;
 		fmt.Printf("| %-25s | %-7d|\n", title, loanBook)
 	}
 	fmt.Println(strings.Repeat("-", 38))
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error scanning rows: %v", err)
+	}
+	return nil
+}
+
+func (h *HandlerImpl) ListUsersNotAdmin() error {
+	rows, err := h.DB.Query(`
+SELECT "UserID", "Nama", "Email", "IsAdmin"
+FROM public."Users"
+WHERE "IsAdmin" = false
+LIMIT 10;
+`)
+	if err != nil {
+		log.Print("Error listing books: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	// Adjusted separator length
+	fmt.Println(strings.Repeat("-", 48))
+	fmt.Printf("| %-3s | %-15s | %-20s | %-6s |\n", "ID", "NAME", "EMAIL", "IS ADMIN?")
+	fmt.Println(strings.Repeat("-", 48))
+
+	for rows.Next() {
+		var id int
+		var name, email string
+		var isAdmin bool
+
+		if err := rows.Scan(&id, &name, &email, &isAdmin); err != nil {
+			return fmt.Errorf("database scanning rows: %v", err)
+		}
+		fmt.Printf("| %-3d | %-15s | %-20s | %-6s |\n", id, name, email, fmt.Sprintf("%t", isAdmin))
+
+	}
+	fmt.Println(strings.Repeat("-", 48))
 
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error scanning rows: %v", err)

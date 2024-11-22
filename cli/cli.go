@@ -96,7 +96,8 @@ func (cli *CLI) showAdminMenu() {
 		fmt.Println("1. User Reports")
 		fmt.Println("2. Lend Reports")
 		fmt.Println("3. Stock Reports")
-		fmt.Println("4. Exit")
+		fmt.Println("4. Most Loan Books Reports")
+		fmt.Println("5. Exit")
 		fmt.Print("Choose an option: ")
 
 		var choice int
@@ -110,6 +111,8 @@ func (cli *CLI) showAdminMenu() {
 		case 3:
 			cli.reportStock()
 		case 4:
+			cli.reportPopularBooks()
+		case 5:
 			fmt.Println("GoodBye Min!")
 			os.Exit(0)
 		default:
@@ -238,6 +241,14 @@ func (cli *CLI) reportPinjam() {
 }
 func (cli *CLI) reportStock() {
 	err := cli.Handler.ReportStock()
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+}
+
+func (cli *CLI) reportPopularBooks() {
+	err := cli.Handler.ReportPopularBooks()
 	if err != nil {
 		log.Print("Error listing users: ", err)
 		log.Fatal(err)

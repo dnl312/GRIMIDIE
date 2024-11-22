@@ -251,7 +251,7 @@ func (cli *CLI) DeleteBook() {
 	fmt.Print("Which book: ")
 	fmt.Scanln(&BookID)
 
-	 err := cli.Handler.DeleteBook(BookID)
+	err := cli.Handler.DeleteBook(BookID)
 	if err != nil {
 		log.Print("Error Deleteing book: ", err)
 		log.Fatal(err)
@@ -300,15 +300,23 @@ func (cli *CLI) returnBook() {
 }
 
 func (cli *CLI) listUsersNotAdmin() {
-	var choice int
-	fmt.Print("Choose ID: ")
-	fmt.Scan(&choice)
 	err := cli.Handler.ListUsersNotAdmin()
 	if err != nil {
 		log.Print("Error listing users: ", err)
 		log.Fatal(err)
 	}
-	fmt.Println("Users listed successfully")
+
+	var choice int
+	fmt.Print("Choose the ID of the user to grant admin rights: ")
+	fmt.Scan(&choice)
+
+	err = cli.Handler.UpdateUserAdminStatus(choice, true)
+	if err != nil {
+		log.Print("Error updating user status: ", err)
+		log.Fatal(err)
+	}
+
+	fmt.Println("User granted admin rights successfully.")
 }
 
 // Region HANDLER interface END

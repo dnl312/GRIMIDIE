@@ -23,10 +23,11 @@ type Handler interface {
 	AddBook(title, pengarang, publishDate string, qty int) error
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
-	DeleteBook(BookID int ) error
+	DeleteBook(BookID int) error
 	ReportStock() error
 	ReportPopularBooks() error
 	ListUsersNotAdmin() error
+	UpdateUserAdminStatus(choice int, b bool) error
 }
 
 type HandlerImpl struct {
@@ -143,19 +144,19 @@ func (h *HandlerImpl) AddBook(title, pengarang, publishDate string, qty int) err
 	return nil
 }
 
-func (h *HandlerImpl) DeleteBook(BookID int ) error{
+func (h *HandlerImpl) DeleteBook(BookID int) error {
 	rows, err := h.DB.Query(`SELECT * from "Books" where "BookID" =  $1 `, BookID)
 	if err != nil {
 		log.Print("Error fetching books: ", err)
 		return err
 	}
 	defer rows.Close()
-	
-	for rows.Next(){
+
+	for rows.Next() {
 		_, err = h.DB.Exec(`DELETE FROM "Books" WHERE "BookID" =  $1`, BookID)
 		if err != nil {
 			log.Print("Error deleting from Books: ", err)
-			return  err
+			return err
 		}
 		log.Print("Successfully deleting from Books... ")
 	}
@@ -472,9 +473,9 @@ LIMIT 10;
 	defer rows.Close()
 
 	// Adjusted separator length
-	fmt.Println(strings.Repeat("-", 48))
+	fmt.Println(strings.Repeat("-", 60))
 	fmt.Printf("| %-3s | %-15s | %-20s | %-6s |\n", "ID", "NAME", "EMAIL", "IS ADMIN?")
-	fmt.Println(strings.Repeat("-", 48))
+	fmt.Println(strings.Repeat("-", 60))
 
 	for rows.Next() {
 		var id int
@@ -484,13 +485,22 @@ LIMIT 10;
 		if err := rows.Scan(&id, &name, &email, &isAdmin); err != nil {
 			return fmt.Errorf("database scanning rows: %v", err)
 		}
-		fmt.Printf("| %-3d | %-15s | %-20s | %-6s |\n", id, name, email, fmt.Sprintf("%t", isAdmin))
+		fmt.Printf("| %-3d | %-15s | %-20s | %-9s |\n", id, name, email, fmt.Sprintf("%t", isAdmin))
 
 	}
-	fmt.Println(strings.Repeat("-", 48))
+	fmt.Println(strings.Repeat("-", 60))
 
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error scanning rows: %v", err)
+	}
+	return nil
+}
+
+func (h *HandlerImpl) UpdateUserAdminStatus(userID int, isAdmin bool) error {
+	query := `UPDATE public."Users" SET "IsAdmin" = $1 WHERE "UserID" = $2`
+	_, err := h.DB.Exec(query, isAdmin, userID)
+	if err != nil {
+		return fmt.Errorf("error updating user admin status: %v", err)
 	}
 	return nil
 }

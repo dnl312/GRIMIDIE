@@ -97,7 +97,8 @@ func (cli *CLI) showAdminMenu() {
 		fmt.Println("2. Lend Reports")
 		fmt.Println("3. Stock Reports")
 		fmt.Println("4. Most Loan Books Reports")
-		fmt.Println("5. Exit")
+		fmt.Println("5. Add Book")
+		fmt.Println("6. Exit")
 		fmt.Print("Choose an option: ")
 
 		var choice int
@@ -113,6 +114,8 @@ func (cli *CLI) showAdminMenu() {
 		case 4:
 			cli.reportPopularBooks()
 		case 5:
+			cli.AddBook()
+		case 6:
 			fmt.Println("GoodBye Min!")
 			os.Exit(0)
 		default:
@@ -188,13 +191,35 @@ func (cli *CLI) listBooks() {
 }
 
 // Handler interface CreatePinjam
+func (cli *CLI) AddBook() {
+	var judul, pengarang, tanggalTerbit string
+	var qty int
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Book Title: ")
+	judul, _ = reader.ReadString('\n')
+	fmt.Println("Writer: ")
+	reader = bufio.NewReader(os.Stdin)
+	pengarang, _ = reader.ReadString('\n')
+	fmt.Println("Publich Date: ")
+	fmt.Scan(&tanggalTerbit)
+	fmt.Println("Quantity: ")
+	fmt.Scan(&qty)
+	err := cli.Handler.AddBook(strings.ReplaceAll(judul, "\n", ""), strings.ReplaceAll(pengarang, "\n", "") , tanggalTerbit, qty)
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+	fmt.Println("Add book successfully...")
+}
+
+// Handler interface CreatePinjam
 func (cli *CLI) lendBook() {
 	var choice int
 	fmt.Println("Choose Book: ")
 	fmt.Scan(&choice)
 	err := cli.Handler.CreatePinjam(cli.CurrentUserID, choice, 1)
 	if err != nil {
-		log.Print("Error listing users: ", err)
+		log.Print("Error listing lending book: ", err)
 		log.Fatal(err)
 	}
 	fmt.Println("Displaying Books List...")
@@ -204,7 +229,7 @@ func (cli *CLI) lendBook() {
 func (cli *CLI) listPinjam() {
 	err := cli.Handler.ListPeminjaman(cli.CurrentUserID)
 	if err != nil {
-		log.Print("Error listing users: ", err)
+		log.Print("Error listing pinjam: ", err)
 		log.Fatal(err)
 	}
 }

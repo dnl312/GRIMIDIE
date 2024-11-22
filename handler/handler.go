@@ -20,6 +20,7 @@ type Handler interface {
 	ListBooks() error
 	CreatePinjam(UserID, BookID, Qty int) error
 	ReturnPinjam(UserID, BookOrderID int) (float64, error)
+	AddBook(title, pengarang, publishDate string, qty int ) error
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
 	ReportStock() error
@@ -125,6 +126,17 @@ ORDER BY
 
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error scanning rows: %v", err)
+	}
+	return nil
+}
+
+func (h *HandlerImpl) AddBook(title, pengarang, publishDate string, qty int ) error{
+		_,err := h.DB.Exec(`INSERT INTO "Books" ("JudulBuku", "Pengarang", "PublishDate", "StokBuku")
+								VALUES($1, $2, $3, $4);`, title, pengarang, publishDate, qty)
+
+	if err != nil {
+		log.Print("Error creating Book : ", err)
+		return err
 	}
 	return nil
 }

@@ -110,26 +110,60 @@ func (h *HandlerImpl) ListBooks() error {
 }
 
 func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
+	// Check if the requested quantity is available in stock
+	var stock int
+	err := h.DB.QueryRow(`SELECT "StokBuku" FROM "Books" WHERE "BookID" = $1`, BookID).Scan(&stock)
+	if err != nil {
+		log.Print("Error checking stock: ", err)
+		return fmt.Errorf("error checking book stock")
+	}
 
+	// If there aren't enough books in stock
+	if stock < Qty {
+		log.Print("Not enough stock available")
+		return fmt.Errorf("not enough stock available")
+	}
+
+	// Begin a transaction to ensure both inserts are atomic
+	tx, err := h.DB.Begin()
+	if err != nil {
+		log.Print("Error starting transaction: ", err)
+		return err
+	}
+	defer tx.Rollback() // Ensure rollback if anything fails
+
+	// Insert into BookOrderDetail
 	var orderDtlId int64
-
-	err := h.DB.QueryRow(`INSERT INTO "BookOrderDetail" ("BookID", "Quantity", "TanggalPinjam", "TanggalBalik", "Denda") 
+	err = tx.QueryRow(`INSERT INTO "BookOrderDetail" ("BookID", "Quantity", "TanggalPinjam", "TanggalBalik", "Denda") 
 						VALUES ($1, $2, NOW(), NULL, 0) 
-						RETURNING ID`,
-		BookID, Qty).Scan(&orderDtlId)
+						RETURNING ID`, BookID, Qty).Scan(&orderDtlId)
 
 	if err != nil {
 		log.Print("Error creating Book Order Detail transaction: ", err)
-
-	} else {
-		_, err = h.DB.Exec(`INSERT INTO "BookOrders" ("UserID", "BookOrderDetailID") VALUES($1, $2)`, UserID, orderDtlId)
-
-		if err != nil {
-			log.Print("Error creating Book Orders transaction: ", err)
-		}
+		return err
 	}
 
-	log.Print("Transaction inserted successfully")
+	// Insert into BookOrders
+	_, err = tx.Exec(`INSERT INTO "BookOrders" ("UserID", "BookOrderDetailID") VALUES($1, $2)`, UserID, orderDtlId)
+	if err != nil {
+		log.Print("Error creating Book Orders transaction: ", err)
+		return err
+	}
+
+	// Decrease the stock of books after the loan
+	_, err = tx.Exec(`UPDATE "Books" SET "StokBuku" = "StokBuku" - $1 WHERE "BookID" = $2`, Qty, BookID)
+	if err != nil {
+		log.Print("Error updating book stock: ", err)
+		return err
+	}
+
+	// Commit the transaction if everything went well
+	if err := tx.Commit(); err != nil {
+		log.Print("Error committing transaction: ", err)
+		return err
+	}
+
+	log.Print("Book loan transaction completed successfully")
 	return nil
 }
 
@@ -175,6 +209,7 @@ func (m *MockHandler) ListPeminjaman(UserID int) error {
 func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 	var Denda float64
 
+	// Query to get the book order details
 	rows, err := h.DB.Query(`
 		SELECT bo."BookOrderDetailID", bod."BookID", 
 		       (CAST(NOW() AS date) - CAST(bod."TanggalPinjam" AS date)) as DateDifference, 
@@ -198,9 +233,11 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 			return 0, err
 		}
 
+		// Calculate the fine if the return is overdue
 		if DateDifference > 7 {
 			Denda = float64(DateDifference * 5000)
 
+			// Update the return date and apply the fine
 			_, err = h.DB.Exec(`UPDATE "BookOrderDetail"
 				SET "TanggalBalik" = NOW(), "Denda" = $1
 				WHERE "BookOrderDetailID" = $2`, Denda, BookOrderDetailID)
@@ -210,6 +247,7 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 			}
 		}
 
+		// Update the stock of the returned book
 		_, err = h.DB.Exec(`
 			UPDATE "Books" 
 			SET "StokBuku" = "StokBuku" + $1 
@@ -218,9 +256,16 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 			log.Print("Error updating Books table: ", err)
 			return 0, err
 		}
+
+		// Delete the record from BookOrderDetail after the return is processed
+		_, err = h.DB.Exec(`DELETE FROM "BookOrderDetail" WHERE "BookOrderDetailID" = $1`, BookOrderDetailID)
+		if err != nil {
+			log.Print("Error deleting from BookOrderDetail: ", err)
+			return 0, err
+		}
 	}
 
-	log.Print("Returning book successfully")
+	log.Print("Returning book successfully and deleting transaction details")
 	return Denda, nil
 }
 

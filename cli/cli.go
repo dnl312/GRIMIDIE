@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
+	"unicode"
 )
 
 type CLI struct {
@@ -138,12 +140,28 @@ func (cli *CLI) signInDebugMode() {
 // Handler interface UserRegister
 func (cli *CLI) signUp() {
 	var name, email, password string
-
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter Name:")
-	name, _ = reader.ReadString('\n')
-	fmt.Print("Enter Email:")
-	fmt.Scanln(&email)
+
+	for {
+		fmt.Print("Enter Name: ")
+		name, _ = reader.ReadString('\n')
+		name = strings.TrimSpace(name)
+
+		if isAlpha(name) {
+			break
+		} else {
+			fmt.Println("Invalid input. Only letters are allowed.")
+		}
+	}
+	for {
+		fmt.Print("Enter Email:")
+		fmt.Scanln(&email)
+		if isValidEmail(email) {
+			break
+		} else {
+			fmt.Println("Invalid email format. Please try again.")
+		}
+	}
 	fmt.Print("Enter Password:")
 	fmt.Scanln(&password)
 
@@ -158,8 +176,15 @@ func (cli *CLI) signUp() {
 // Handler interface UserLogin
 func (cli *CLI) signIn() {
 	var email, password string
-	fmt.Print("Email:")
-	fmt.Scanln(&email)
+	for {
+		fmt.Print("Email:")
+		fmt.Scanln(&email)
+		if isValidEmail(email) {
+			break
+		} else {
+			fmt.Println("Invalid email format. Please try again.")
+		}
+	}
 	fmt.Print("Password:")
 	fmt.Scanln(&password)
 
@@ -256,3 +281,19 @@ func (cli *CLI) reportPopularBooks() {
 }
 
 // REPORT USER DISINI YAH
+
+// Region Func Validasi Input
+
+func isAlpha(input string) bool {
+	for _, letter := range input {
+		if !unicode.IsLetter(letter) && letter != ' ' {
+			return false
+		}
+	}
+	return true
+}
+
+func isValidEmail(email string) bool {
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
+}

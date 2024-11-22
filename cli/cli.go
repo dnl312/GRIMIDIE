@@ -87,24 +87,27 @@ func (cli *CLI) signIn() {
 	fmt.Print("Password:")
 	fmt.Scanln(&password)
 
-	userID, err := cli.Handler.UserLogin(email, password)
+	userID, isAdmin, err := cli.Handler.UserLogin(email, password)
 	if err != nil {
 		fmt.Println("Error during sign in:", err)
 		return
 	}
+	if isAdmin {
+		cli.showAdminMenu()
+	} else {
+		cli.CurrentUserID = userID
+		cli.showUserMenu()
+	}
 
-	cli.CurrentUserID = userID
-	cli.showUserMenu()
 }
 
 func (cli *CLI) signInDebugMode() {
 
-	userID, err := cli.Handler.UserLogin("jack@example.com", "password890")
+	userID, _, err := cli.Handler.UserLogin("jack@example.com", "password890")
 	if err != nil {
 		fmt.Println("Error during sign in:", err)
 		return
 	}
-
 	cli.CurrentUserID = userID
 	cli.showUserMenu()
 }
@@ -131,6 +134,34 @@ func (cli *CLI) showUserMenu() {
 			cli.returnBook()
 		case 3:
 			fmt.Println("GoodBye!")
+			os.Exit(0)
+		default:
+			fmt.Println("Invalid choice. Please try again.")
+		}
+	}
+}
+
+func (cli *CLI) showAdminMenu() {
+	for {
+		fmt.Println("\nWelcome Admin")
+		fmt.Println("1. User Reports")
+		fmt.Println("2. Order Reports")
+		fmt.Println("3. Stock Reports")
+		fmt.Println("4. Exit")
+		fmt.Print("Choose an option: ")
+
+		var choice int
+		fmt.Scanln(&choice)
+
+		switch choice {
+		case 1:
+			//cli.UserReports()
+		case 2:
+			//cli.OrderReports()
+		case 3:
+			//cli.StockReports()
+		case 4:
+			fmt.Println("GoodBye Min!")
 			os.Exit(0)
 		default:
 			fmt.Println("Invalid choice. Please try again.")

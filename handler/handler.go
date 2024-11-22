@@ -16,7 +16,7 @@ type MockHandler struct {
 
 type Handler interface {
 	UserRegister(name, email, password string) (int, error)
-	UserLogin(email, password string) (int, error)
+	UserLogin(email, password string) (int, bool, error)
 	ListBooks() error
 	CreatePinjam(UserID, BookID, Qty int) error
 	ReturnPinjam(BookOrderID int) (float64, error)
@@ -50,25 +50,26 @@ func (m *MockHandler) UserRegister(Nama, Email, Password string) (int, error) {
 	return args.Int(0), args.Error(1)
 }
 
-func (h *HandlerImpl) UserLogin(email, password string) (int, error) {
+func (h *HandlerImpl) UserLogin(email, password string) (int, bool, error) {
 	var storedPassword string
 	var UserID int
+	var IsAdmin bool
 
-	query := `SELECT "UserID", "Password" FROM "Users" WHERE "Email" = $1`
-	err := h.DB.QueryRow(query, email).Scan(&UserID, &storedPassword)
+	query := `SELECT "UserID", "Password", "IsAdmin" FROM "Users" WHERE "Email" = $1`
+	err := h.DB.QueryRow(query, email).Scan(&UserID, &storedPassword, &IsAdmin)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, fmt.Errorf("user not found")
+			return 0, false, fmt.Errorf("user not found")
 		}
-		return 0, fmt.Errorf("database error: %v", err)
+		return 0, false, fmt.Errorf("database error: %v", err)
 	}
 
 	if storedPassword != password {
-		return 0, fmt.Errorf("invalid password")
+		return 0, false, fmt.Errorf("invalid password")
 	}
 
 	fmt.Printf("Sign In Successful! \n")
-	return UserID, nil
+	return UserID, IsAdmin, nil
 }
 
 func (m *MockHandler) UserLogin(email, password string) (int, error) {
@@ -84,9 +85,9 @@ func (h *HandlerImpl) ListBooks() error {
 	defer rows.Close()
 
 	// Adjusted separator length
-	fmt.Println(strings.Repeat("-", 89))
-	fmt.Printf("| %-3s | %-25s | %-20s | %-15s | %-10s |\n", "ID", "BOOK TITLE", "AUTHOR", "PUBLISH DATE", "STOCK")
-	fmt.Println(strings.Repeat("-", 89))
+	fmt.Println(strings.Repeat("-", 81))
+	fmt.Printf("| %-3s | %-25s | %-20s | %-12s | %-5s |\n", "ID", "BOOK TITLE", "AUTHOR", "PUBLISH DATE", "STOCK")
+	fmt.Println(strings.Repeat("-", 81))
 
 	for rows.Next() {
 		var id int
@@ -98,9 +99,9 @@ func (h *HandlerImpl) ListBooks() error {
 		if err := rows.Scan(&id, &name, &author, &publishDate, &stock); err != nil {
 			return fmt.Errorf("database scanning rows: %v", err)
 		}
-		fmt.Printf("| %-3d | %-25s | %-20s | %-15s | %-10d |\n", id, name, author, publishDate.Format("2006-01-02"), stock)
+		fmt.Printf("| %-3d | %-25s | %-20s | %-12s | %-5d |\n", id, name, author, publishDate.Format("2006-01-02"), stock)
 	}
-	fmt.Println(strings.Repeat("-", 89))
+	fmt.Println(strings.Repeat("-", 81))
 
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error scanning rows: %v", err)

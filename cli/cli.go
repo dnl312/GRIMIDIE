@@ -118,6 +118,10 @@ func (cli *CLI) showAdminMenu() {
 		case 5:
 			cli.AddBook()
 		case 6:
+			//delete book
+		case 7:
+			//add admin
+		case 8:
 			fmt.Println("GoodBye Min!")
 			os.Exit(0)
 		default:

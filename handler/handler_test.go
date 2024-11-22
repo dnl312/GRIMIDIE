@@ -82,3 +82,39 @@ func TestReturnPinjam_Negative(t *testing.T) {
 
 	mockHandler.AssertExpectations(t)
 }
+
+func TestUserRegister(t *testing.T) {
+	mockHandler := new(handler.MockHandler)
+
+	// Atur return value untuk method UserRegister
+	mockHandler.On("UserRegister", "Maman Racing", "maman.race@yahu.com", "mamansukabalap").
+		Return(123, nil)
+
+	// Panggil fungsi mock
+	userID, err := mockHandler.UserRegister("Maman Racing", "maman.race@yahu.com", "mamansukabalap")
+
+	// Validasi hasil
+	assert.NoError(t, err)
+	assert.Equal(t, 123, userID)
+
+	// Memastikan semua expectation terpenuhi
+	mockHandler.AssertExpectations(t)
+}
+
+func TestUserLogin(t *testing.T) {
+	mockHandler := new(handler.MockHandler)
+
+	// Atur return value untuk method UserLogin
+	mockHandler.On("UserLogin", "Maman Racing", "mamansukabalap").
+		Return(123, nil)
+
+	// Panggil fungsi mock
+	userID, err := mockHandler.UserLogin("Maman Racing", "mamansukabalap")
+
+	// Validasi hasil
+	assert.NoError(t, err)
+	assert.Equal(t, 123, userID)
+
+	// Memastikan semua expectation terpenuhi
+	mockHandler.AssertExpectations(t)
+}

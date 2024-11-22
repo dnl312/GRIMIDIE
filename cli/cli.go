@@ -10,7 +10,7 @@ import (
 )
 
 type CLI struct {
-	Handler handler.Handler
+	Handler       handler.Handler
 	CurrentUserID int
 }
 
@@ -48,8 +48,8 @@ func (cli *CLI) showMenu() {
 			cli.signUp()
 		case 2:
 			// Sign In
-			cli.signInDebugMode()
-			//cli.signIn()
+			//cli.signInDebugMode()
+			cli.signIn()
 		case 3:
 			fmt.Println("GoodBye!")
 			os.Exit(0)
@@ -71,7 +71,7 @@ func (cli *CLI) signUp() {
 	fmt.Print("Enter Password:")
 	fmt.Scanln(&password)
 
-	_,err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
+	_, err := cli.Handler.UserRegister(strings.ReplaceAll(name, "\n", ""), email, password)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -93,7 +93,7 @@ func (cli *CLI) signIn() {
 		return
 	}
 
-	cli.CurrentUserID = userID 
+	cli.CurrentUserID = userID
 	cli.showUserMenu()
 }
 
@@ -105,7 +105,7 @@ func (cli *CLI) signInDebugMode() {
 		return
 	}
 
-	cli.CurrentUserID = userID 
+	cli.CurrentUserID = userID
 	cli.showUserMenu()
 }
 
@@ -151,7 +151,6 @@ func (cli *CLI) lendBook() {
 	fmt.Println("Displaying Books List...")
 }
 
-
 func (c *CLI) listPinjam() {
 	err := c.Handler.ListPeminjaman(c.CurrentUserID)
 	if err != nil {
@@ -166,13 +165,13 @@ func (cli *CLI) returnBook() {
 	fmt.Print("Choose: ")
 	fmt.Scanln(&OrderID)
 
-	denda,err := cli.Handler.ReturnPinjam(OrderID)
+	denda, err := cli.Handler.ReturnPinjam(OrderID)
 	if err != nil {
 		log.Print("Error returning book: ", err)
 		log.Fatal(err)
 	}
 
-	if(denda>0){
+	if denda > 0 {
 		fmt.Printf("Denda: %.2f", denda)
 		fmt.Println()
 	}

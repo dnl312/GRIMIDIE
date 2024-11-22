@@ -35,7 +35,7 @@ func NewHandler(DB *sql.DB) *HandlerImpl {
 
 func (h *HandlerImpl) UserRegister(Nama, Email, Password string) (int, error) {
 	var UserID int
-	err := h.DB.QueryRow(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1,$2,$3)`, Nama, Email, Password).Scan(&UserID)
+	err := h.DB.QueryRow(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1,$2,$3) RETURNING "UserID"`, Nama, Email, Password).Scan(&UserID)
 	if err != nil {
 		log.Print("Error inserting record: ", err)
 		return 0, err
@@ -43,6 +43,11 @@ func (h *HandlerImpl) UserRegister(Nama, Email, Password string) (int, error) {
 
 	log.Print("Record inserted successfully")
 	return UserID, nil
+}
+
+func (m *MockHandler) UserRegister(Nama, Email, Password string) (int, error) {
+	args := m.Called(Nama, Email, Password)
+	return args.Int(0), args.Error(1)
 }
 
 func (h *HandlerImpl) UserLogin(email, password string) (int, error) {
@@ -66,6 +71,10 @@ func (h *HandlerImpl) UserLogin(email, password string) (int, error) {
 	return UserID, nil
 }
 
+func (m *MockHandler) UserLogin(email, password string) (int, error) {
+	args := m.Called(email, password)
+	return args.Int(0), args.Error(1)
+}
 func (h *HandlerImpl) ListBooks() error {
 	rows, err := h.DB.Query(`SELECT * FROM "Books"`)
 	if err != nil {
@@ -172,7 +181,7 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 		FROM "BookOrders" bo
 		LEFT JOIN "BookOrderDetail" bod ON bod."BookOrderDetailID" = bo."BookOrderDetailID" 
 		WHERE bo."OrderID" = $1`, BookOrderID)
-		
+
 	if err != nil {
 		log.Print("Error fetching book order transaction: ", err)
 		return 0, err
@@ -214,8 +223,7 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 	return Denda, nil
 }
 
-
-func (m *MockHandler) ReturnPinjam(BookOrderID int)  error{
+func (m *MockHandler) ReturnPinjam(BookOrderID int) error {
 	args := m.Called(BookOrderID)
 	return args.Error(0)
 }

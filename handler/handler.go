@@ -23,6 +23,7 @@ type Handler interface {
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
 	ReportStock() error
+	ReportPopularBooks() error
 }
 
 type HandlerImpl struct {
@@ -266,7 +267,7 @@ func (h *HandlerImpl) ReturnPinjam(UserID, BookOrderID int) (float64, error) {
 		       bod."Quantity" 
 		FROM "BookOrders" bo
 		LEFT JOIN "BookOrderDetail" bod ON bod."BookOrderDetailID" = bo."BookOrderDetailID" 
-		WHERE bo."UserID" = $1 and bo."OrderID" = $2`,UserID, BookOrderID)
+		WHERE bo."UserID" = $1 and bo."OrderID" = $2`, UserID, BookOrderID)
 
 	if err != nil {
 		log.Print("Error fetching book order transaction: ", err)
@@ -374,6 +375,43 @@ ORDER BY
 		fmt.Printf("| %-25s | %-7d| %-10d | %-12d |\n", title, Stock, loanBook, finalStock)
 	}
 	fmt.Println(strings.Repeat("-", 66))
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error scanning rows: %v", err)
+	}
+	return nil
+}
+
+func (h *HandlerImpl) ReportPopularBooks() error {
+	rows, err := h.DB.Query(`
+SELECT b."JudulBuku",
+       COUNT(ub."UserBookID") AS "TotalDipinjam"
+FROM "UserBooks" ub
+JOIN "Books" b ON b."BookID" = ub."BookID"
+GROUP BY b."JudulBuku"
+ORDER BY "TotalDipinjam" DESC;
+`)
+	if err != nil {
+		log.Print("Error listing books: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	// Adjusted separator length
+	fmt.Println(strings.Repeat("-", 38))
+	fmt.Printf("| %-25s | %-6s |\n", "BOOK TITLE", "TOTAL")
+	fmt.Println(strings.Repeat("-", 38))
+
+	for rows.Next() {
+		var title string
+		var loanBook int
+
+		if err := rows.Scan(&title, &loanBook); err != nil {
+			return fmt.Errorf("database scanning rows: %v", err)
+		}
+		fmt.Printf("| %-25s | %-7d|\n", title, loanBook)
+	}
+	fmt.Println(strings.Repeat("-", 38))
 
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error scanning rows: %v", err)

@@ -4,211 +4,226 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"regexp"
+	"strings"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 )
 
-// MockHandler untuk testing
 type MockHandler struct {
 	mock.Mock
 }
 
-// Handler interface
 type Handler interface {
-	UserRegister(name, email, password string) error
-	UserLogin(email, password string) error
+	UserRegister(name, email, password string) (int, error)
+	UserLogin(email, password string) (int, error)
+	ListBooks() error
 	CreatePinjam(UserID, BookID, Qty int) error
-	DeleteReturnedTransactions() error
+	ReturnPinjam(BookOrderID int) (float64, error)
+	ListPeminjaman(UserID int) error
 }
 
-// HandlerImpl implementasi handler
 type HandlerImpl struct {
 	DB *sql.DB
 }
 
-// Buat instance HandlerImpl
 func NewHandler(DB *sql.DB) *HandlerImpl {
 	return &HandlerImpl{
 		DB: DB,
 	}
 }
 
-// Helper function to validate password
-func isValidPassword(password string) bool {
-	// Example: password must be at least 8 characters long
-	if len(password) < 8 {
-		return false
-	}
-	return true
-}
-
-// Helper function to validate email format
-func isValidEmail(email string) bool {
-	// Simple regex for email validation
-	const emailRegex = `^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$`
-	re := regexp.MustCompile(emailRegex)
-	return re.MatchString(email)
-}
-
-// Helper function to validate name (alphabetic only)
-func isValidName(name string) bool {
-	// Simple regex for name validation (only alphabetic characters and spaces)
-	const nameRegex = `^[a-zA-Z\s]+$`
-	re := regexp.MustCompile(nameRegex)
-	return re.MatchString(name)
-}
-
-// Daftarkan user baru
-func (h *HandlerImpl) UserRegister(Nama, Email, Password string) error {
-	// Validate Name
-	if Nama == "" {
-		return fmt.Errorf("nama tidak boleh kosong")
-	}
-
-	if !isValidName(Nama) {
-		return fmt.Errorf("nama hanya boleh berisi huruf dan spasi")
-	}
-
-	// Validate Email
-	if !isValidEmail(Email) {
-		fmt.Println("Invalid email format:", Email) // Debugging log
-		return fmt.Errorf("email tidak valid")
-	}
-
-	// Validate Password
-	if !isValidPassword(Password) {
-		return fmt.Errorf("password harus minimal 8 karakter")
-	}
-
-	// Check if email is already registered
-	var existingUserCount int
-	err := h.DB.QueryRow(`SELECT COUNT(*) FROM "Users" WHERE "Email" = $1`, Email).Scan(&existingUserCount)
+func (h *HandlerImpl) UserRegister(Nama, Email, Password string) (int, error) {
+	var UserID int
+	err := h.DB.QueryRow(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1,$2,$3) RETURNING "UserID"`, Nama, Email, Password).Scan(&UserID)
 	if err != nil {
-		log.Print("Gagal memeriksa email di database: ", err)
-		return err
+		log.Print("Error inserting record: ", err)
+		return 0, err
 	}
 
-	if existingUserCount > 0 {
-		return fmt.Errorf("email sudah terdaftar")
-	}
-
-	// Insert new user into database
-	_, err = h.DB.Exec(`INSERT INTO "Users" ("Nama", "Email", "Password") VALUES ($1, $2, $3)`, Nama, Email, Password)
-	if err != nil {
-		log.Print("Gagal menambahkan user: ", err)
-		return err
-	}
-
-	log.Print("User berhasil ditambahkan")
-	return nil
+	log.Print("Record inserted successfully")
+	return UserID, nil
 }
 
-// Prompt for user details with validation as they are entered
-func (h *HandlerImpl) PromptUserInput() (string, string, string, error) {
-	var name, email, password string
-
-	// Prompt user for Name and validate immediately
-	fmt.Print("Enter Name: ")
-	fmt.Scanln(&name)
-	if !isValidName(name) {
-		return "", "", "", fmt.Errorf("nama hanya boleh berisi huruf dan spasi")
-	}
-
-	// Prompt user for Email and validate immediately
-	fmt.Print("Enter Email: ")
-	fmt.Scanln(&email)
-	if !isValidEmail(email) {
-		return "", "", "", fmt.Errorf("email tidak valid")
-	}
-
-	// Prompt user for Password and validate immediately
-	fmt.Print("Enter Password: ")
-	fmt.Scanln(&password)
-	if !isValidPassword(password) {
-		return "", "", "", fmt.Errorf("password harus minimal 8 karakter")
-	}
-
-	return name, email, password, nil
+func (m *MockHandler) UserRegister(Nama, Email, Password string) (int, error) {
+	args := m.Called(Nama, Email, Password)
+	return args.Int(0), args.Error(1)
 }
 
-// Login user
-func (h *HandlerImpl) UserLogin(email, password string) error {
+func (h *HandlerImpl) UserLogin(email, password string) (int, error) {
 	var storedPassword string
+	var UserID int
 
-	query := `SELECT "Password" FROM "Users" WHERE "Email" = $1`
-	err := h.DB.QueryRow(query, email).Scan(&storedPassword)
+	query := `SELECT "UserID", "Password" FROM "Users" WHERE "Email" = $1`
+	err := h.DB.QueryRow(query, email).Scan(&UserID, &storedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("user tidak ditemukan")
+			return 0, fmt.Errorf("user not found")
 		}
-		return fmt.Errorf("error database: %v", err)
+		return 0, fmt.Errorf("database error: %v", err)
 	}
 
 	if storedPassword != password {
-		return fmt.Errorf("password salah")
+		return 0, fmt.Errorf("invalid password")
 	}
 
-	fmt.Printf("Login berhasil\n")
+	fmt.Printf("Sign In Successful! \n")
+	return UserID, nil
+}
+
+func (m *MockHandler) UserLogin(email, password string) (int, error) {
+	args := m.Called(email, password)
+	return args.Int(0), args.Error(1)
+}
+func (h *HandlerImpl) ListBooks() error {
+	rows, err := h.DB.Query(`SELECT * FROM "Books"`)
+	if err != nil {
+		log.Print("Error listing books: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	// Adjusted separator length
+	fmt.Println(strings.Repeat("-", 89))
+	fmt.Printf("| %-3s | %-25s | %-20s | %-15s | %-10s |\n", "ID", "BOOK TITLE", "AUTHOR", "PUBLISH DATE", "STOCK")
+	fmt.Println(strings.Repeat("-", 89))
+
+	for rows.Next() {
+		var id int
+		var name string
+		var author string
+		var publishDate time.Time
+		var stock int
+
+		if err := rows.Scan(&id, &name, &author, &publishDate, &stock); err != nil {
+			return fmt.Errorf("database scanning rows: %v", err)
+		}
+		fmt.Printf("| %-3d | %-25s | %-20s | %-15s | %-10d |\n", id, name, author, publishDate.Format("2006-01-02"), stock)
+	}
+	fmt.Println(strings.Repeat("-", 89))
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error scanning rows: %v", err)
+	}
 	return nil
 }
 
-// Tambah transaksi peminjaman buku
 func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
+
 	var orderDtlId int64
 
 	err := h.DB.QueryRow(`INSERT INTO "BookOrderDetail" ("BookID", "Quantity", "TanggalPinjam", "TanggalBalik", "Denda") 
 						VALUES ($1, $2, NOW(), NULL, 0) 
-						RETURNING "ID"`,
+						RETURNING ID`,
 		BookID, Qty).Scan(&orderDtlId)
 
 	if err != nil {
-		log.Print("Gagal membuat detail transaksi: ", err)
-		return err
+		log.Print("Error creating Book Order Detail transaction: ", err)
+
+	} else {
+		_, err = h.DB.Exec(`INSERT INTO "BookOrders" ("UserID", "BookOrderDetailID") VALUES($1, $2)`, UserID, orderDtlId)
+
+		if err != nil {
+			log.Print("Error creating Book Orders transaction: ", err)
+		}
 	}
 
-	_, err = h.DB.Exec(`INSERT INTO "BookOrders" ("UserID", "BookOrderDetailID") VALUES($1, $2)`, UserID, orderDtlId)
-	if err != nil {
-		log.Print("Gagal membuat transaksi peminjaman: ", err)
-		return err
-	}
-
-	log.Print("Transaksi berhasil ditambahkan")
+	log.Print("Transaction inserted successfully")
 	return nil
 }
 
-// Hapus transaksi yang buku-nya sudah dikembalikan
-func (h *HandlerImpl) DeleteReturnedTransactions() error {
-	result, err := h.DB.Exec(`DELETE FROM "BookOrders" 
-		WHERE "BookOrderDetailID" IN (
-			SELECT "ID" 
-			FROM "BookOrderDetail" 
-			WHERE "TanggalBalik" IS NOT NULL
-		)`)
-
-	if err != nil {
-		log.Printf("Gagal menghapus transaksi: %v", err)
-		return err
-	}
-
-	rowsDeleted, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("Error retrieving rows affected: %v", err)
-		return err
-	}
-	//
-	log.Printf("Berhasil menghapus %d transaksi yang sudah selesai.", rowsDeleted)
-	return nil
-}
-
-// Mock untuk testing CreatePinjam
 func (m *MockHandler) CreatePinjam(UserID, BookID, Qty int) error {
 	args := m.Called(UserID, BookID, Qty)
 	return args.Error(0)
 }
 
-// Mock untuk testing DeleteReturnedTransactions
-func (m *MockHandler) DeleteReturnedTransactions() error {
-	args := m.Called()
+func (h *HandlerImpl) ListPeminjaman(UserID int) error {
+	rows, err := h.DB.Query(`SELECT bo."OrderID", b."JudulBuku" , bod."TanggalPinjam" FROM "BookOrders" bo
+							left join "BookOrderDetail" bod on bod."BookOrderDetailID" = bo."BookOrderDetailID" 
+							left join "Books" b ON b."BookID" = bod."BookID" where bo."UserID" = $1 AND bod."TanggalBalik" IS NULL`, UserID)
+	if err != nil {
+		log.Print("Error fetching records: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	fmt.Println("ID\tJudul Buku\tTanggal Pinjam")
+	for rows.Next() {
+		var OrderID int
+		var JudulBuku string
+		var TanggalPinjam time.Time
+		err = rows.Scan(&OrderID, &JudulBuku, &TanggalPinjam)
+		if err != nil {
+			log.Print("Error scanning record: ", err)
+			return err
+		}
+
+		dateOnly := TanggalPinjam.Format("2006-01-02")
+		fmt.Printf("%d\t%s\t%s\n", OrderID, JudulBuku, dateOnly)
+	}
+	fmt.Println()
+
+	return nil
+}
+
+func (m *MockHandler) ListPeminjaman(UserID int) error {
+	args := m.Called(UserID)
+	return args.Error(0)
+}
+
+func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
+	var Denda float64
+
+	rows, err := h.DB.Query(`
+		SELECT bo."BookOrderDetailID", bod."BookID", 
+		       (CAST(NOW() AS date) - CAST(bod."TanggalPinjam" AS date)) as DateDifference, 
+		       bod."Quantity" 
+		FROM "BookOrders" bo
+		LEFT JOIN "BookOrderDetail" bod ON bod."BookOrderDetailID" = bo."BookOrderDetailID" 
+		WHERE bo."OrderID" = $1`, BookOrderID)
+
+	if err != nil {
+		log.Print("Error fetching book order transaction: ", err)
+		return 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var BookOrderDetailID, BookID, DateDifference, Quantity int
+		err = rows.Scan(&BookOrderDetailID, &BookID, &DateDifference, &Quantity)
+
+		if err != nil {
+			log.Print("Error scanning record: ", err)
+			return 0, err
+		}
+
+		if DateDifference > 7 {
+			Denda = float64(DateDifference * 5000)
+
+			_, err = h.DB.Exec(`UPDATE "BookOrderDetail"
+				SET "TanggalBalik" = NOW(), "Denda" = $1
+				WHERE "BookOrderDetailID" = $2`, Denda, BookOrderDetailID)
+			if err != nil {
+				log.Print("Error updating BookOrderDetail: ", err)
+				return 0, err
+			}
+		}
+
+		_, err = h.DB.Exec(`
+			UPDATE "Books" 
+			SET "StokBuku" = "StokBuku" + $1 
+			WHERE "BookID" = $2`, Quantity, BookID)
+		if err != nil {
+			log.Print("Error updating Books table: ", err)
+			return 0, err
+		}
+	}
+
+	log.Print("Returning book successfully")
+	return Denda, nil
+}
+
+func (m *MockHandler) ReturnPinjam(BookOrderID int) error {
+	args := m.Called(BookOrderID)
 	return args.Error(0)
 }

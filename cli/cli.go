@@ -104,7 +104,7 @@ func (cli *CLI) signIn() {
 
 func (cli *CLI) signInDebugMode() {
 
-	userID, _, err := cli.Handler.UserLogin("jack@example.com", "password890")
+	userID, _, err := cli.Handler.UserLogin("hannah@example.com", "password234")
 	if err != nil {
 		fmt.Println("Error during sign in:", err)
 		return
@@ -212,7 +212,7 @@ func (cli *CLI) returnBook() {
 	fmt.Print("Choose: ")
 	fmt.Scanln(&OrderID)
 
-	denda, err := cli.Handler.ReturnPinjam(OrderID)
+	denda, err := cli.Handler.ReturnPinjam(cli.CurrentUserID, OrderID)
 	if err != nil {
 		log.Print("Error returning book: ", err)
 		log.Fatal(err)

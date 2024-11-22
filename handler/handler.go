@@ -19,7 +19,7 @@ type Handler interface {
 	UserLogin(email, password string) (int, bool, error)
 	ListBooks() error
 	CreatePinjam(UserID, BookID, Qty int) error
-	ReturnPinjam(BookOrderID int) (float64, error)
+	ReturnPinjam(UserID, BookOrderID int) (float64, error)
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
 }
@@ -137,7 +137,7 @@ func (h *HandlerImpl) CreatePinjam(UserID, BookID, Qty int) error {
 	var orderDtlId int64
 	err = tx.QueryRow(`INSERT INTO "BookOrderDetail" ("BookID", "Quantity", "TanggalPinjam", "TanggalBalik", "Denda") 
 						VALUES ($1, $2, NOW(), NULL, 0) 
-						RETURNING ID`, BookID, Qty).Scan(&orderDtlId)
+						RETURNING "BookOrderDetailID"`, BookID, Qty).Scan(&orderDtlId)
 
 	if err != nil {
 		log.Print("Error creating Book Order Detail transaction: ", err)
@@ -238,7 +238,7 @@ func (h *HandlerImpl) ReportPeminjaman() error {
 	return nil
 }
 
-func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
+func (h *HandlerImpl) ReturnPinjam(UserID, BookOrderID int) (float64, error) {
 	var Denda float64
 
 	// Query to get the book order details
@@ -248,7 +248,7 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 		       bod."Quantity" 
 		FROM "BookOrders" bo
 		LEFT JOIN "BookOrderDetail" bod ON bod."BookOrderDetailID" = bo."BookOrderDetailID" 
-		WHERE bo."OrderID" = $1`, BookOrderID)
+		WHERE bo."UserID" = $1 and bo."OrderID" = $2`,UserID, BookOrderID)
 
 	if err != nil {
 		log.Print("Error fetching book order transaction: ", err)
@@ -290,14 +290,25 @@ func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {
 		}
 
 		// Delete the record from BookOrderDetail after the return is processed
-		_, err = h.DB.Exec(`DELETE FROM "BookOrderDetail" WHERE "BookOrderDetailID" = $1`, BookOrderDetailID)
-		if err != nil {
-			log.Print("Error deleting from BookOrderDetail: ", err)
-			return 0, err
+		if DateDifference < 7 {
+			_, err = h.DB.Exec(`DELETE FROM "BookOrders" WHERE "BookOrderDetailID" = $1`, BookOrderDetailID)
+			if err != nil {
+				log.Print("Error deleting from BookOrderDetail: ", err)
+				return 0, err
+			}
+
+			_, err = h.DB.Exec(`DELETE FROM "BookOrderDetail" WHERE "BookOrderDetailID" = $1`, BookOrderDetailID)
+			if err != nil {
+				log.Print("Error deleting from BookOrderDetail: ", err)
+				return 0, err
+			}
+
+			log.Print("Returning book successfully and deleting transaction details")
+			return Denda, nil
 		}
 	}
 
-	log.Print("Returning book successfully and deleting transaction details")
+	log.Print("Returning book successfully")
 	return Denda, nil
 }
 

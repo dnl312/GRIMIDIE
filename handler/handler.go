@@ -327,7 +327,12 @@ func (h *HandlerImpl) ReturnPinjam(UserID, BookOrderID int) (float64, error) {
 		}
 	}
 
-	log.Print("Returning book successfully")
+	if !rows.Next(){
+		log.Print("Record not found! ")
+	}else{
+		log.Print("Returning book successfully")
+	}
+	
 	return Denda, nil
 }
 

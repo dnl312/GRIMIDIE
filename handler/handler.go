@@ -21,6 +21,7 @@ type Handler interface {
 	CreatePinjam(UserID, BookID, Qty int) error
 	ReturnPinjam(BookOrderID int) (float64, error)
 	ListPeminjaman(UserID int) error
+	ReportPeminjaman() error
 }
 
 type HandlerImpl struct {
@@ -204,6 +205,37 @@ func (h *HandlerImpl) ListPeminjaman(UserID int) error {
 func (m *MockHandler) ListPeminjaman(UserID int) error {
 	args := m.Called(UserID)
 	return args.Error(0)
+}
+
+func (h *HandlerImpl) ReportPeminjaman() error {
+	rows, err := h.DB.Query(`SELECT bo."OrderID", b."JudulBuku" , u."Nama", bod."TanggalPinjam" FROM "BookOrders" bo
+							left join "BookOrderDetail" bod on bod."BookOrderDetailID" = bo."BookOrderDetailID" 
+							left join "Books" b ON b."BookID" = bod."BookID"
+							left join "Users" u ON u."UserID" = bo."UserID"`)
+	if err != nil {
+		log.Print("Error fetching records: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	fmt.Println("ID\tNama User\tTanggal Pinjam\tJudul Buku")
+	fmt.Println(strings.Repeat("-", 80))
+	for rows.Next() {
+		var OrderID int
+		var JudulBuku,Nama string
+		var TanggalPinjam time.Time
+		err = rows.Scan(&OrderID, &JudulBuku,&Nama, &TanggalPinjam)
+		if err != nil {
+			log.Print("Error scanning record: ", err)
+			return err
+		}
+
+		dateOnly := TanggalPinjam.Format("2006-01-02")
+		fmt.Printf("%d\t%s\t\t%s\t%s\n", OrderID, Nama, dateOnly, JudulBuku)
+	}
+	fmt.Println()
+
+	return nil
 }
 
 func (h *HandlerImpl) ReturnPinjam(BookOrderID int) (float64, error) {

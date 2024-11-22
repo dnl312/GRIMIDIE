@@ -23,6 +23,7 @@ type Handler interface {
 	AddBook(title, pengarang, publishDate string, qty int) error
 	ListPeminjaman(UserID int) error
 	ReportPeminjaman() error
+	DeleteBook(BookID int ) error
 	ReportStock() error
 	ReportPopularBooks() error
 	ListUsersNotAdmin() error
@@ -139,6 +140,26 @@ func (h *HandlerImpl) AddBook(title, pengarang, publishDate string, qty int) err
 		log.Print("Error creating Book : ", err)
 		return err
 	}
+	return nil
+}
+
+func (h *HandlerImpl) DeleteBook(BookID int ) error{
+	rows, err := h.DB.Query(`SELECT * from "Books" where "BookID" =  $1 `, BookID)
+	if err != nil {
+		log.Print("Error fetching books: ", err)
+		return err
+	}
+	defer rows.Close()
+	
+	for rows.Next(){
+		_, err = h.DB.Exec(`DELETE FROM "Books" WHERE "BookID" =  $1`, BookID)
+		if err != nil {
+			log.Print("Error deleting from Books: ", err)
+			return  err
+		}
+		log.Print("Successfully deleting from Books... ")
+	}
+
 	return nil
 }
 

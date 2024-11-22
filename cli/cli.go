@@ -48,11 +48,12 @@ func (cli *CLI) showMenu() {
 			cli.signUp()
 		case 2:
 			// Sign In
-			//cli.signInDebugMode()
 			cli.signIn()
 		case 3:
 			fmt.Println("GoodBye!")
 			os.Exit(0)
+		case 123:
+			cli.signInDebugMode()
 		default:
 			fmt.Println("Invalid choice. Please try again.")
 		}
@@ -145,7 +146,7 @@ func (cli *CLI) showAdminMenu() {
 	for {
 		fmt.Println("\nWelcome Admin")
 		fmt.Println("1. User Reports")
-		fmt.Println("2. Order Reports")
+		fmt.Println("2. Lend Reports")
 		fmt.Println("3. Stock Reports")
 		fmt.Println("4. Exit")
 		fmt.Print("Choose an option: ")
@@ -157,7 +158,7 @@ func (cli *CLI) showAdminMenu() {
 		case 1:
 			//cli.UserReports()
 		case 2:
-			//cli.OrderReports()
+			cli.reportPinjam()
 		case 3:
 			//cli.StockReports()
 		case 4:
@@ -178,12 +179,27 @@ func (cli *CLI) listBooks() {
 }
 
 func (cli *CLI) lendBook() {
-	// logic
+	var choice int
+	fmt.Println("Choose Book: ")
+	fmt.Scan(&choice)
+	err := cli.Handler.CreatePinjam(cli.CurrentUserID, choice, 1)
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
 	fmt.Println("Displaying Books List...")
 }
 
 func (c *CLI) listPinjam() {
 	err := c.Handler.ListPeminjaman(c.CurrentUserID)
+	if err != nil {
+		log.Print("Error listing users: ", err)
+		log.Fatal(err)
+	}
+}
+
+func (c *CLI) reportPinjam() {
+	err := c.Handler.ReportPeminjaman()
 	if err != nil {
 		log.Print("Error listing users: ", err)
 		log.Fatal(err)
